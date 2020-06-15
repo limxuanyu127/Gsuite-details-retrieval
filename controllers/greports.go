@@ -56,7 +56,7 @@ func GetNumLicense(report_srv *admin.Service, customerId string) (string, int, i
 	dt := time.Now().AddDate(0,0,-1)
 	dateString := getDateString(dt)
 
-	licenseResp, err:=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:gsuite_unlimited_total_licenses,accounts:gsuite_unlimited_used_licenses").Do()
+	licenseResp, err:=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_1") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_2")).Do()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func GetNumLicense(report_srv *admin.Service, customerId string) (string, int, i
 	for numReports <1{
 		dt = dt.AddDate(0,0,-1)
 		dateString = getDateString(dt)
-		licenseResp, _=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:gsuite_unlimited_total_licenses,accounts:gsuite_unlimited_used_licenses").Do()
+		licenseResp, _=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_1") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_2")).Do()
 		numReports= len(licenseResp.UsageReports)
 	}
 
@@ -103,10 +103,10 @@ func parseReport(resp *admin.UsageReports) (int, int){
 	fmt.Println(len(reportParams))
 	for i:=0; i<len(reportParams); i++{
 		param := reportParams[i]
-		if param.Name == "accounts:gsuite_unlimited_total_licenses"{
+		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_1"){
 			totalLicenses = int(param.IntValue)
 		}
-		if param.Name == "accounts:gsuite_unlimited_used_licenses"{
+		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_2") {
 			usedLicenses = int(param.IntValue)
 		}
 	}

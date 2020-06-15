@@ -4,6 +4,7 @@ import (
 	"GsuiteRetrieval/controllers"
 	"encoding/json"
 	"fmt"
+	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/sheets/v4"
 	"log"
 	"os"
@@ -16,9 +17,11 @@ func main() {
 	switch job:= os.Getenv("JOB"); job{
 
 	case "email":
-		licenseThreshold := 200
+		licenseThreshold,_ := strconv.Atoi(os.Getenv("LICENSE_THRESHOLD"))
 		customerId := os.Getenv("CUSTOMER_ID")
 		sendgridApiKey := os.Getenv("SENDGRID_API_KEY")
+
+
 
 		report_srv := controllers.CreateReportService(os.Getenv("ADMIN_EMAIL"))
 		reportDate, totalLicenses, usedLicenses := controllers.GetNumLicense(report_srv, customerId)
@@ -29,12 +32,13 @@ func main() {
 	case "sheets":
 		gsheet_srv := controllers.CreateGsheetService(os.Getenv("ADMIN_EMAIL"))
 		gsuite_srv := controllers.CreateGsuiteService(os.Getenv("ADMIN_EMAIL"))
-		report_srv := controllers.CreateReportService(os.Getenv("ADMIN_EMAIL"))
+		//report_srv := controllers.CreateReportService(os.Getenv("ADMIN_EMAIL"))
 
 		spreadsheetId := os.Getenv("SPREADSHEET_ID")
-		customerId := os.Getenv("CUSTOMER_ID")
+		//customerId := os.Getenv("CUSTOMER_ID")
 		domainName:= os.Getenv("DOMAIN_NAME")
 		batchSize := os.Getenv("BATCH_SIZE")
+		sheetTabName := os.Getenv("TAB_NAME")
 		batchSizeInt,_ := strconv.Atoi(batchSize)
 
 		// Variables for loop below
@@ -43,98 +47,127 @@ func main() {
 		rowCounter := 2 // row at which u start appending
 		batchCounter := 0 //counter to keep track of # of values in vr before appending as a batch
 
-		// Check licenses
-		_, totalLicenses, usedLicenses := controllers.GetNumLicense(report_srv, customerId)
 
 		// Clear Sheet
-		controllers.ClearSheet(gsheet_srv, spreadsheetId)
+		controllers.ClearSheet(sheetTabName,  gsheet_srv, spreadsheetId)
 
-		// Get all users
-		call := gsuite_srv.Users.List().Domain(domainName)
+		// Get first 500 users
+		call := gsuite_srv.Users.List().Domain(domainName).MaxResults(500)
 		allUsers, err := call.Do()
+		nextPageToken := allUsers.NextPageToken
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		for true{
 
-		for i := 0; i < len(allUsers.Users); i++ {
+			fmt.Println("fetching")
+			for i := 0; i < len(allUsers.Users); i++ {
 
-			rowFormula = "A" + strconv.Itoa(rowCounter)
-			target := allUsers.Users[i]
+				rowFormula = sheetTabName + "!" + "A" + strconv.Itoa(rowCounter)
+				target := allUsers.Users[i]
 
-			// Get all fields of target user
-			primaryEmail := target.PrimaryEmail
-			firstName := target.Name.GivenName
-			lastName := target.Name.FamilyName
-			isAdmin := target.IsAdmin
-			isDelegatedAdmin := target.IsDelegatedAdmin
-			isEnrolledIn2Sv := target.IsEnrolledIn2Sv
-			isEnforcedIn2Sv := target.IsEnforcedIn2Sv
-			orgUnitPath := target.OrgUnitPath
-			suspended := target.Suspended
-			suspensionReason := target.SuspensionReason
+				// Get all fields of target user
+				primaryEmail := target.PrimaryEmail
+				firstName := target.Name.GivenName
+				lastName := target.Name.FamilyName
+				isAdmin := target.IsAdmin
+				isDelegatedAdmin := target.IsDelegatedAdmin
+				isEnrolledIn2Sv := target.IsEnrolledIn2Sv
+				isEnforcedIn2Sv := target.IsEnforcedIn2Sv
+				orgUnitPath := target.OrgUnitPath
+				suspended := target.Suspended
+				suspensionReason := target.SuspensionReason
 
-			// Fields that require datetime converino
-			creationTime := target.CreationTime
-			creationTime = convertToDt(creationTime)
-			lastLoginTime := target.LastLoginTime
-			lastLoginTime = convertToDt(lastLoginTime)
+				// Fields that require datetime converino
+				creationTime := target.CreationTime
+				creationTime = convertToDt(creationTime)
+				lastLoginTime := target.LastLoginTime
+				lastLoginTime = convertToDt(lastLoginTime)
 
-			// Fields that when extracted from admin.User, are interfacs{} , ie. probably returning array
-			phoneIntf := target.Phones
-			phoneValue, phonePrimary, phoneType := getPhoneInfo(phoneIntf)
-			relationsIntf := target.Relations
-			rel0value, rel0type := getRelInfo(relationsIntf)
-			organizaionIntf := target.Organizations
-			org0map, org1map := getOrgInfo(organizaionIntf)
-			org0name := org0map["name"]
-			org0title := org0map["title"]
-			org0primary := org0map["primary"]
-			org0custom := org0map["custom"]
-			org0dept := org0map["department"]
-			org0desc := org0map["description"]
-			org0location := org0map["location"]
-			org0symbol := org0map["symbol"]
-			org0domain := org0map["domain"]
-			org0costCenter := org0map["costcenter"]
-			org1name := org1map["name"]
-			org1title := org1map["title"]
-			//org1primary := org1map["primary"]
-			org1custom := org1map["custom"]
-			org1dept := org1map["department"]
-			org1desc := org1map["description"]
-			org1location := org1map["location"]
-			org1symbol := org1map["symbol"]
-			org1domain := org1map["domain"]
-			org1costCenter := org1map["costcenter"]
+				// Fields that when extracted from admin.User, are interfacs{} , ie. probably returning array
+				phoneIntf := target.Phones
+				phoneValue, phonePrimary, phoneType := getPhoneInfo(phoneIntf)
+				relationsIntf := target.Relations
+				rel0value, rel0type := getRelInfo(relationsIntf)
+				organizaionIntf := target.Organizations
+				org0map, org1map := getOrgInfo(organizaionIntf)
+				org0name := org0map["org0name"]
+				org0title := org0map["org0title"]
+				org0primary := org0map["org0primary"]
+				org0custom := org0map["org0custom"]
+				org0dept := org0map["org0dept"]
+				org0desc := org0map["org0desc"]
+				org0location := org0map["org0location"]
+				org0symbol := org0map["org0symbol"]
+				org0domain := org0map["org0domain"]
+				org0costCenter := org0map["org0costCenter"]
+				org1name := org1map["org1name"]
+				org1title := org1map["org1title"]
+				//org1primary := org1map["primary"]
+				org1custom := org1map["org1custom"]
+				org1dept := org1map["org1dept"]
+				org1desc := org1map["org1desc"]
+				org1location := org1map["org1location"]
+				org1symbol := org1map["org1symbol"]
+				org1domain := org1map["org1domain"]
+				org1costCenter := org1map["org1costCenter"]
 
-			// Adding a user fields to vr, which is then added to batchData
-			myval := []interface{}{primaryEmail, firstName, lastName, nil, nil, isAdmin, isDelegatedAdmin, isEnrolledIn2Sv, isEnforcedIn2Sv, creationTime, lastLoginTime, orgUnitPath, suspended, suspensionReason, nil, org0title, org0primary, org0custom, org0dept, org0desc, org0costCenter, rel0value, rel0type, org0name, phoneValue, phonePrimary, phoneType, org0location, org0symbol, org0domain, org1name, org1title, org1custom, org1dept, org1symbol, org1location, org1desc, org1domain, org1costCenter, totalLicenses, usedLicenses}
-			vr.Values = append(vr.Values, myval)
-			vr.MajorDimension = "ROWS"
-			if vr.Range == ""{
-				vr.Range = rowFormula
+				// Adding a user field to vr
+				var myval []interface{}
+				myval = []interface{}{primaryEmail, firstName, lastName, nil, nil, isAdmin, isDelegatedAdmin, isEnrolledIn2Sv, isEnforcedIn2Sv, creationTime, lastLoginTime, orgUnitPath, suspended, suspensionReason, nil, org0title, org0primary, org0custom, org0dept, org0desc, org0costCenter, rel0value, rel0type, org0name, phoneValue, phonePrimary, phoneType, org0location, org0symbol, org0domain, org1name, org1title, org1custom, org1dept, org1symbol, org1location, org1desc, org1domain, org1costCenter}
+				//if i==0{
+				//	// Add license data to first row
+				//	myval = append(myval, totalLicenses, usedLicenses)
+				//}
+				vr.Values = append(vr.Values, myval)
+				vr.MajorDimension = "ROWS"
+				if vr.Range == ""{
+					vr.Range = rowFormula
+				}
+
+				// When batch size is reached, add to gsheets and update counters(reset vr and batchcounter)
+				if batchCounter == batchSizeInt {
+					controllers.AddToSheet(gsheet_srv, spreadsheetId, &vr)
+					batchCounter = 0
+					vr.Values= vr.Values[:0]
+					vr.Range=""
+				}
+				// Increment row and batch counters (building up vr, before adding to sheet)
+				rowCounter += 1
+				batchCounter += 1
 			}
-
-			// When batch size is reached, add to gsheets and update counters(reset vr and batchcounter)
-			if batchCounter == batchSizeInt {
-				controllers.AddToSheet(gsheet_srv, spreadsheetId, &vr)
-				batchCounter = 0
-				vr.Values= vr.Values[:0]
-				vr.Range=""
+			// Get next page of users
+			allUsers, nextPageToken = LoopGetUsers(gsuite_srv, domainName, nextPageToken)
+			if allUsers == nil{
+				// Add remaining values that weren't enough to cause a batch insert
+				if len(vr.Values) > 0 {
+					fmt.Println("Final add to sheet")
+					controllers.AddToSheet(gsheet_srv, spreadsheetId, &vr)
+				}
+				break
 			}
+		}
 
-			// Increment row and batch counters (building up vr, before adding to sheet)
-			rowCounter += 1
-			batchCounter += 1
-		}
-		if len(vr.Values) > 0 {
-			fmt.Println("Final add to sheet")
-			controllers.AddToSheet(gsheet_srv, spreadsheetId, &vr)
-		}
+
 	}
 }
 
+
+func LoopGetUsers(gsuite_srv *admin.Service, domainName string, nextPageToken string ) (*admin.Users, string){
+
+	if nextPageToken == ""{
+		return nil, ""
+	}else{
+		call := gsuite_srv.Users.List().Domain(domainName).MaxResults(500).PageToken(nextPageToken)
+		allUsers, err := call.Do()
+		nextPageToken = allUsers.NextPageToken
+		if err != nil {
+			log.Fatal(err)
+		}
+		return allUsers, nextPageToken
+	}
+}
 
 func getPhoneInfo(phoneIntf interface{}) (interface{}, interface{}, interface{}) {
 	var phoneValue interface{}
