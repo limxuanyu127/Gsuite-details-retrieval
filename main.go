@@ -17,6 +17,7 @@ func main() {
 	switch job:= os.Getenv("JOB"); job{
 
 	case "email":
+		fmt.Println("Starting Email job")
 		licenseThreshold,_ := strconv.Atoi(os.Getenv("LICENSE_THRESHOLD"))
 		customerId := os.Getenv("CUSTOMER_ID")
 		sendgridApiKey := os.Getenv("SENDGRID_API_KEY")
@@ -30,6 +31,7 @@ func main() {
 		}
 
 	case "sheets":
+		fmt.Println("Starting Gsheets job")
 		gsheet_srv := controllers.CreateGsheetService(os.Getenv("ADMIN_EMAIL"))
 		gsuite_srv := controllers.CreateGsuiteService(os.Getenv("ADMIN_EMAIL"))
 		//report_srv := controllers.CreateReportService(os.Getenv("ADMIN_EMAIL"))
@@ -66,6 +68,7 @@ func main() {
 
 				rowFormula = sheetTabName + "!" + "A" + strconv.Itoa(rowCounter)
 				target := allUsers.Users[i]
+				fmt.Println("Building user")
 
 				// Get all fields of target user
 				primaryEmail := target.PrimaryEmail

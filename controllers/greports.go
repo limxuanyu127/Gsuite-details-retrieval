@@ -53,19 +53,27 @@ func CreateReportService(userEmail string) *admin.Service {
 
 
 func GetNumLicense(report_srv *admin.Service, customerId string) (string, int, int){
+	fmt.Println("Getting license form customer usage report")
 	dt := time.Now().AddDate(0,0,-1)
 	dateString := getDateString(dt)
 
-	licenseResp, err:=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_1") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_2")).Do()
+	licenseResp, err:=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_TOTAL") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_USED")).Do()
 	if err != nil {
 		log.Fatal(err)
 	}
 	numReports := len(licenseResp.UsageReports)
+
+	retryCounter := 0
 	for numReports <1{
 		dt = dt.AddDate(0,0,-1)
 		dateString = getDateString(dt)
-		licenseResp, _=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_1") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_2")).Do()
+		licenseResp, _=report_srv.CustomerUsageReports.Get(dateString).CustomerId(customerId).Parameters("accounts:" + os.Getenv("ACCOUNT_TYPE_TOTAL") + ","+ "accounts:" + os.Getenv("ACCOUNT_TYPE_USED")).Do()
 		numReports= len(licenseResp.UsageReports)
+
+		retryCounter++
+		if retryCounter >10{
+			return "ERROR: cannot retrieve customer usage reports, check account type params", 0, 0
+		}
 	}
 
 	// Once the DT with the latest report is found
@@ -93,7 +101,7 @@ func getDateString(dt time.Time) string{
 
 
 func parseReport(resp *admin.UsageReports) (int, int){
-
+	fmt.Println("Parsing report")
 	var totalLicenses int
 	var usedLicenses int
 
@@ -103,10 +111,10 @@ func parseReport(resp *admin.UsageReports) (int, int){
 	fmt.Println(len(reportParams))
 	for i:=0; i<len(reportParams); i++{
 		param := reportParams[i]
-		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_1"){
+		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_TOTAL"){
 			totalLicenses = int(param.IntValue)
 		}
-		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_2") {
+		if param.Name == "accounts:" + os.Getenv("ACCOUNT_TYPE_USED") {
 			usedLicenses = int(param.IntValue)
 		}
 	}
