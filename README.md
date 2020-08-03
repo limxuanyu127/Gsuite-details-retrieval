@@ -10,7 +10,7 @@ The second function of this script is to check if there are sufficient Gsuite li
 Each file in this directory is responsible for making API request to google platforms. A service account key (json) is required to get authentication. 
 
 The 3 services that we will make API requests to are the Reports API (under Gsuite SDK), Directory API (under Gsuite SDK), Gsheet API
-<hr style="border:1px solid gray">
+<hr style="border:0.5px solid gray">
 
 ### main.go
 
