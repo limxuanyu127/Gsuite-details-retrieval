@@ -1,7 +1,5 @@
 # Retrieval of employee's Gsuite account details
 
-<hr style="border:2px solid gray"> 
-
 The objective of this script is to retrieve all the details of all Gsuite users in a given domain. This requested information will be updated on a spreadsheet.
 
 The second function of this script is to check if there are sufficient Gsuite licenses in the domain.
