@@ -1,15 +1,19 @@
 # Retrieval of employee's Gsuite account details
 
+<hr style="border:2px solid gray"> 
+
 The objective of this script is to retrieve all the details of all Gsuite users in a given domain. This requested information will be updated on a spreadsheet.
 
 The second function of this script is to check if there are sufficient Gsuite licenses in the domain.
 
 ### Controllers Directory
+<hr style="border:1px solid gray"> 
 Each file in this directory is responsible for making API request to google platforms. A service account key (json) is required to get authentication. 
 
 The 3 services that we will make API requests to are the Reports API (under Gsuite SDK), Directory API (under Gsuite SDK), Gsheet API
 
 ### main.go
+<hr style="border:1px solid gray"> 
 
 **Function 1: Retrieve information**
 - Fetch all Gsuite users using Gsuite SDK Api (directory)
